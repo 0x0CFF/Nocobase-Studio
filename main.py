@@ -22,6 +22,39 @@ def create_secured_dir(path, mode, owner=None, group=None):
 
     print(f"[创建完成] 目录 {path} 已创建，权限 {oct(mode)}，所有者 {owner}:{group}")
 
+# 创建 Markdown 文件（支持修改所有者、组、权限，需 root 权限）
+def create_secured_file(path, content, mode, owner=None, group=None):
+    # 1. 写入内容
+    with open(path, 'w') as f:
+        f.write(content)
+    
+    # 2. 设置权限
+    os.chmod(path, mode)
+    
+    # 3. 设置所有者和用户组
+    try:
+        # 获取用户ID（UID）
+        uid = pwd.getpwnam(owner).pw_uid
+        # 获取组ID（GID）
+        gid = grp.getgrnam(group).gr_gid
+        
+        # 修改所有者和组
+        os.chown(path, uid, gid)
+        
+        print(f"[创建完成] 目录 {path} 已创建，权限 {oct(mode)}，所有者 {owner}:{group}")
+        
+    except PermissionError as e:
+        print(f"错误：权限不足，无法修改文件所有者或组")
+        print(f"详细信息: {e}")
+        print("提示：需要 root 权限才能修改文件所有者")
+        
+    except KeyError as e:
+        print(f"错误：用户或用户组不存在")
+        print(f"详细信息: {e}")
+        
+    except Exception as e:
+        print(f"未知错误: {e}")
+        
 ##################################################################################################################################################
 
 app = Flask(__name__)
@@ -90,64 +123,60 @@ def create_project_folder():
     try:
         match project_type:
             case "高校大赛" | "演示美化":
-                os.makedirs(project_path, exist_ok=True)
-                os.makedirs(rf"{project_path}/00_合同文件", exist_ok=True)
-                os.makedirs(rf"{project_path}/01_项目框架", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/01_参考文件", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/动图", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/工程", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/模型", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/视频", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/图标", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/图片", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/文档", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/音乐", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/音效", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/字体", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/02_甲方素材/其他", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/动图", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/工程", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/模型", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/视频", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/图标", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/图片", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/文档", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/音乐", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/音效", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/字体", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/03_乙方素材/其他", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/04_风格定稿", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/05_历史版本", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/PDF", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/演示", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/图片", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/长图", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/视频", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程/06_输出文件/字体", exist_ok=True)
-                os.makedirs(rf"{project_path}/03_辅助工程", exist_ok=True)
-                os.makedirs(rf"{project_path}/04_包装工程", exist_ok=True)
+                create_secured_dir(rf"{project_path}", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/00_合同文件", 0o770, owner="BUSINESS_R5", group="BUSINESS")
+                create_secured_dir(rf"{project_path}/01_项目框架", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/01_参考文件", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/动图", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/模型", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/视频", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/图标", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/图片", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/文档", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/音乐", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/音效", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/字体", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/02_甲方素材/其他", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/动图", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/模型", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/视频", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/图标", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/图片", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/文档", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/音乐", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/音效", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/字体", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/03_乙方素材/其他", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/04_风格定稿", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/05_历史版本", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/PDF", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/演示", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/图片", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/长图", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/视频", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程/06_输出文件/字体", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/03_辅助工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/04_包装工程", 0o775, owner="BOARD_R5", group="PUBLIC")
                 # 创建项目要求文档
-                with open(rf"{project_path}/02_演示工程/02_甲方素材/项目要求.md", "w", encoding="utf-8") as f:
-                    f.write(markdown_content)
-                # TODO: 设置文件夹权限
+                create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/项目要求.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
             case "项目微课":
-                os.makedirs(project_path, exist_ok=True)
-                os.makedirs(rf"{project_path}/00_合同文件", exist_ok=True)
-                os.makedirs(rf"{project_path}/01_项目框架", exist_ok=True)
-                os.makedirs(rf"{project_path}/01_项目框架/01_甲方词稿", exist_ok=True)
-                os.makedirs(rf"{project_path}/01_项目框架/02_逐句词稿", exist_ok=True)
-                os.makedirs(rf"{project_path}/02_演示工程", exist_ok=True)
-                # 创建文件夹
-                os.makedirs(rf"{project_path}/03_视频工程", exist_ok=True)
-                # 创建文件夹
-                os.makedirs(rf"{project_path}/04_动画工程", exist_ok=True)
-                # 创建文件夹
-                # 创建项目要求文档
-                # TODO: 设置文件夹权限
+                create_secured_dir(rf"{project_path}", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/00_合同文件", 0o770, owner="BUSINESS_R5", group="BUSINESS")
+                create_secured_dir(rf"{project_path}/01_项目框架", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/01_项目框架/01_甲方词稿", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/01_项目框架/02_逐句词稿", 0o775, owner="BOARD_R5", group="PUBLIC")
+                create_secured_dir(rf"{project_path}/02_演示工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                # 创建子项目文件夹
+                create_secured_dir(rf"{project_path}/03_视频工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                # 创建子项目文件夹
+                create_secured_dir(rf"{project_path}/04_动画工程", 0o775, owner="BOARD_R5", group="PUBLIC")
+                # 创建子项目文件夹
             case _:
                 pass
 
