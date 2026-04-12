@@ -1,4 +1,6 @@
 import os
+import pwd
+import grp
 import textwrap
 from openai import OpenAI
 from datetime import datetime
@@ -63,6 +65,12 @@ app = Flask(__name__)
 # API_KEY = os.environ.get("FOLDER_API_KEY", "your-secret-key-here")
 API_KEY = "NkJAb2wucXFJXUZnu2pTWQKVSKjTEyTR"
 
+# 初始化 Deepseek API
+client = OpenAI(
+    api_key=os.environ.get('DEEPSEEK_API_KEY'),
+    base_url="https://api.deepseek.com"
+)
+    
 ##################################################################################################################################################
 
 @app.route('/create_project_folder', methods=['POST'])
@@ -185,11 +193,6 @@ def create_project_folder():
         print(rf"[创建失败] {project_path}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-    # 初始化 Deepseek
-    client = OpenAI(
-        api_key=os.environ.get('DEEPSEEK_API_KEY'),
-        base_url="https://api.deepseek.com")
-
     try:
         match project_type:
             case "演示美化":
@@ -204,8 +207,8 @@ def create_project_folder():
                     stream=False
                 )
                 # 写入文档
-                with open(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", "w", encoding="utf-8") as f:
-                    f.write(response.choices[0].message.content)
+                markdown_content = response.choices[0].message.content
+                create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")  
                 print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
                 return jsonify({"status": "success", "path": project_path}), 200
             case "高校大赛":
