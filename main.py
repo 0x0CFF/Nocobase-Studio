@@ -1,6 +1,7 @@
 import os
 import pwd
 import grp
+import shutil
 import textwrap
 from openai import OpenAI
 from datetime import datetime
@@ -8,7 +9,7 @@ from flask import Flask, request, jsonify
 
 # 创建文件夹（支持修改所有者、组、权限，需 root 权限）
 # 示例： create_secured_dir("/tmp/my_app_data", 0o750, owner="www-data", group="www-data")
-def create_secured_dir(path, mode, owner=None, group=None):
+def create_secured_dir(path, mode=None, owner=None, group=None):
     # 1. 创建目录（先临时清除 umask 以获得精确权限）
     old_umask = os.umask(0)
     try:
@@ -24,6 +25,57 @@ def create_secured_dir(path, mode, owner=None, group=None):
 
     print(f"[创建完成] 目录 {path} 已创建，权限 {oct(mode)}，所有者 {owner}:{group}")
 
+# 设置文件的所有者、所属组和权限
+def set_file_owner_and_permission(filepath, mode=None, owner=None, group=None):
+    """
+    设置文件的所有者、所属组和权限
+    
+    参数:
+        filepath: 文件路径
+        owner: 用户名（可选，None表示不修改）
+        group: 组名（可选，None表示不修改）
+        mode: 权限模式（如0o644，可选，None表示不修改）
+    
+    返回:
+        bool: 成功返回True，失败返回False
+    """
+    try:
+        # 检查文件是否存在
+        if not os.path.exists(filepath):
+            print(f"错误：文件 {filepath} 不存在")
+            return False
+        
+        # 设置所有者和组
+        if owner is not None or group is not None:
+            uid = -1
+            gid = -1
+            
+            if owner is not None:
+                uid = pwd.getpwnam(owner).pw_uid
+            
+            if group is not None:
+                gid = grp.getgrnam(group).gr_gid
+            
+            os.chown(filepath, uid, gid)
+            print(f"已设置所有者: {owner or '不变'}:{group or '不变'}")
+        
+        # 设置权限
+        if mode is not None:
+            os.chmod(filepath, mode)
+            print(f"已设置权限: {oct(mode)}")
+        
+        return True
+        
+    except PermissionError:
+        print(f"错误：权限不足，需要 root 权限才能更改所有者")
+        return False
+    except KeyError as e:
+        print(f"错误：用户或组不存在 - {e}")
+        return False
+    except Exception as e:
+        print(f"错误：{e}")
+        return False
+        
 # 创建 Markdown 文件（支持修改所有者、组、权限，需 root 权限）
 def create_secured_file(path, content, mode, owner=None, group=None):
     # 1. 写入内容
@@ -173,6 +225,10 @@ def create_project_folder():
                 create_secured_dir(rf"{project_path}/04_包装工程", 0o775, owner="BOARD_R5", group="PUBLIC")
                 # 创建项目要求文档
                 create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/项目要求.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
+                # 复制幻灯片母稿
+                pptx_file = rf"{project_path}/02_演示工程/V1.0_{project_name}.pptx"
+                shutil.copy2("./Assets/空白母稿.pptx", pptx_file)
+                set_file_owner_and_permission(pptx_file, 0o775, owner="BOARD_R5", group="PUBLIC")
             case "项目微课":
                 create_secured_dir(rf"{project_path}", 0o775, owner="BOARD_R5", group="PUBLIC")
                 create_secured_dir(rf"{project_path}/00_合同文件", 0o770, owner="BUSINESS_R5", group="BUSINESS")
