@@ -1,11 +1,46 @@
 import os
 import pwd
 import grp
+import json
 import shutil
 import textwrap
-from openai import OpenAI
+import requests
 from datetime import datetime
 from flask import Flask, request, jsonify
+
+def dify_workflows(project_name):
+    url = "http://192.168.31.97:10080/v1/workflows/run"
+    headers = {
+        'Authorization': 'Bearer app-8xEKcjhEkgYD6wkNdLTbDiPl',
+        'Content-Type': 'application/json',
+    }
+    data = {
+        "inputs": {"projectName": project_name},
+        "response_mode": "blocking",
+        "user": "0x0CFF"
+    }
+
+    try:
+        # 设置超时时间，避免一直等待
+        response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
+        # print(f"状态码: {response.status_code}")
+        # 解析 JSON
+        data = json.loads(response.text)
+        status = data['data']['status']     # 工作流状态
+        if status == "succeeded":
+            return data['data']['outputs']['text']
+        else:
+            print("[错误信息] 请求错误！")
+            return 0
+    except requests.exceptions.Timeout:
+        print("[错误信息] 请求超时！服务可能没有响应")
+        return 0
+    except requests.exceptions.ConnectionError as e:
+        print(f"[错误信息] 连接错误: {e}")
+        return 0
+    except Exception as e:
+        print(f"[错误信息] 其他错误: {e}")
+        return 0
 
 # 创建文件夹（支持修改所有者、组、权限，需 root 权限）
 # 示例： create_secured_dir("/tmp/my_app_data", 0o750, owner="www-data", group="www-data")
@@ -29,86 +64,86 @@ def create_secured_dir(path, mode=None, owner=None, group=None):
 def set_file_owner_and_permission(filepath, mode=None, owner=None, group=None):
     """
     设置文件的所有者、所属组和权限
-    
+
     参数:
         filepath: 文件路径
         owner: 用户名（可选，None表示不修改）
         group: 组名（可选，None表示不修改）
         mode: 权限模式（如0o644，可选，None表示不修改）
-    
+
     返回:
         bool: 成功返回True，失败返回False
     """
     try:
         # 检查文件是否存在
         if not os.path.exists(filepath):
-            print(f"错误：文件 {filepath} 不存在")
+            print(f"[系统错误] 文件 {filepath} 不存在")
             return False
-        
+
         # 设置所有者和组
         if owner is not None or group is not None:
             uid = -1
             gid = -1
-            
+
             if owner is not None:
                 uid = pwd.getpwnam(owner).pw_uid
-            
+
             if group is not None:
                 gid = grp.getgrnam(group).gr_gid
-            
+
             os.chown(filepath, uid, gid)
-            print(f"已设置所有者: {owner or '不变'}:{group or '不变'}")
-        
+            print(f"[系统信息] 已设置所有者: {owner or '不变'}:{group or '不变'}")
+
         # 设置权限
         if mode is not None:
             os.chmod(filepath, mode)
-            print(f"已设置权限: {oct(mode)}")
-        
+            print(f"[系统信息] 已设置权限: {oct(mode)}")
+
         return True
-        
+
     except PermissionError:
-        print(f"错误：权限不足，需要 root 权限才能更改所有者")
+        print(f"[系统错误] 权限不足，需要 root 权限才能更改所有者")
         return False
     except KeyError as e:
-        print(f"错误：用户或组不存在 - {e}")
+        print(f"[系统错误] 用户或组不存在 - {e}")
         return False
     except Exception as e:
-        print(f"错误：{e}")
+        print(f"[系统错误] {e}")
         return False
-        
+
 # 创建 Markdown 文件（支持修改所有者、组、权限，需 root 权限）
 def create_secured_file(path, content, mode, owner=None, group=None):
     # 1. 写入内容
     with open(path, 'w') as f:
         f.write(content)
-    
+
     # 2. 设置权限
     os.chmod(path, mode)
-    
+
     # 3. 设置所有者和用户组
     try:
         # 获取用户ID（UID）
         uid = pwd.getpwnam(owner).pw_uid
         # 获取组ID（GID）
         gid = grp.getgrnam(group).gr_gid
-        
+
         # 修改所有者和组
         os.chown(path, uid, gid)
-        
+
         print(f"[创建完成] 目录 {path} 已创建，权限 {oct(mode)}，所有者 {owner}:{group}")
-        
+
     except PermissionError as e:
-        print(f"错误：权限不足，无法修改文件所有者或组")
-        print(f"详细信息: {e}")
-        print("提示：需要 root 权限才能修改文件所有者")
-        
+        print(f"[系统错误] 权限不足，无法修改文件所有者或组")
+        print(f"[系统错误] 详细信息: {e}")
+        print(f"[系统错误] 提示：需要 root 权限才能修改文件所有者")
+
     except KeyError as e:
-        print(f"错误：用户或用户组不存在")
-        print(f"详细信息: {e}")
-        
+        print(f"[系统错误] 用户或用户组不存在")
+        print(f"[系统错误] 详细信息: {e}")
+
     except Exception as e:
-        print(f"未知错误: {e}")
-        
+        print(f"[系统错误] 未知错误: {e}")
+
 ##################################################################################################################################################
 
 app = Flask(__name__)
@@ -117,12 +152,6 @@ app = Flask(__name__)
 # API_KEY = os.environ.get("FOLDER_API_KEY", "your-secret-key-here")
 API_KEY = "NkJAb2wucXFJXUZnu2pTWQKVSKjTEyTR"
 
-# 初始化 Deepseek API
-client = OpenAI(
-    api_key=os.environ.get('DEEPSEEK_API_KEY'),
-    base_url="https://api.deepseek.com"
-)
-    
 ##################################################################################################################################################
 
 @app.route('/create_project_folder', methods=['POST'])
@@ -252,21 +281,15 @@ def create_project_folder():
     try:
         match project_type:
             case "演示美化":
-                # Ai 工作流，获取内容
-                response = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[
-                        # TODO: 设置提示词
-                        {"role": "system", "content": "You are a helpful assistant"},
-                        {"role": "user", "content": "Hello"},
-                    ],
-                    stream=False
-                )
-                # 写入文档
-                markdown_content = response.choices[0].message.content
-                create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")  
-                print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
-                return jsonify({"status": "success", "path": project_path}), 200
+                markdown_content = dify_workflows(project_name)
+                if markdown_content != 0:
+                    # 写入文档
+                    create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
+                    print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
+                    return jsonify({"status": "success", "path": project_path}), 200
+                else:
+                    print("[错误信息] 工作流执行失败")
+                    return jsonify({"status": "success", "path": project_path}), 200
             case "高校大赛":
                 print(rf"[温馨提示] 暂无 AI 工作流")
                 return jsonify({"status": "success", "path": project_path}), 200
