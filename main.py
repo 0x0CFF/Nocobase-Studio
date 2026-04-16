@@ -15,7 +15,7 @@ def dify_workflows(project_name):
         'Content-Type': 'application/json',
     }
     data = {
-        "inputs": {"messages": project_name},
+        "inputs": {"projectName": project_name},
         "response_mode": "blocking",
         "user": "0x0CFF"
     }
@@ -161,11 +161,11 @@ def create_project_folder():
 
     # 从前端获取数据
     data = request.get_json()
-    created_at = data.get('createdAt')              # 创建日期
-    project_type = data.get('projectType')          # 项目类型
-    unit_name = data.get('unitName')                # 甲方单位
-    name_array = data.get('nameArray')              # 甲方负责人
-    project_name = data.get('projectName')          # 项目名称
+    created_at = data.get('createdAt')                                # 创建日期
+    project_type = data.get('projectType')                            # 项目类型
+    unit_name = data.get('unitName')                                  # 甲方单位
+    name_array = data.get('nameArray')                                # 甲方负责人
+    project_name = data.get('projectName')                            # 项目名称
 
     # 校验
     if not created_at:
@@ -288,14 +288,34 @@ def create_project_manuscript():
 
     # 从前端获取数据
     data = request.get_json()
+    created_at = data.get('createdAt')                                # 创建日期
     project_type = data.get('projectType')                            # 项目类型
+    unit_name = data.get('unitName')                                  # 甲方单位
+    name_array = data.get('nameArray')                                # 甲方负责人
+    project_name = data.get('projectName')                            # 项目名称
     generative_manuscript = data.get('generativeManuscript')          # 生成式文稿
-
+    
     # 校验
+    if not created_at:
+        return jsonify({"status": "error", "message": "创建日期不能为空"}), 400
     if not project_type:
         return jsonify({"status": "error", "message": "项目类型不能为空"}), 400
+    if not unit_name:
+        return jsonify({"status": "error", "message": "甲方单位不能为空"}), 400
+    if not name_array:
+        return jsonify({"status": "error", "message": "甲方负责人不能为空"}), 400
+    if not project_name:
+        return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
     if not generative_manuscript:
         return jsonify({"status": "error", "message": "生成式文稿选项不能为空"}), 400
+
+    # 处理数据
+    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    date_str = dt.strftime('%Y.%m.%d')
+
+    # 声明项目文件夹
+    base_path = "/mnt/Workspace/协作盘"
+    project_path = rf"{base_path}/{date_str}_{project_type}-{unit_name}-{"、".join(name_array)}-{project_name}"
 
     if generative_manuscript == "是":
         try:
@@ -306,7 +326,7 @@ def create_project_manuscript():
                         # 写入文档
                         create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
                         print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
-                        return jsonify({"status": "success"), 200
+                        return jsonify({"status": "success"}), 200
                     else:
                         print("[错误信息] 工作流执行失败")
                         return jsonify({"status": "success"}), 200
@@ -332,6 +352,32 @@ def archive_project_folder():
 
     # 从前端获取数据
     data = request.get_json()
+    created_at = data.get('createdAt')                                # 创建日期
+    project_type = data.get('projectType')                            # 项目类型
+    unit_name = data.get('unitName')                                  # 甲方单位
+    name_array = data.get('nameArray')                                # 甲方负责人
+    project_name = data.get('projectName')                            # 项目名称
+    
+    # 校验
+    if not created_at:
+        return jsonify({"status": "error", "message": "创建日期不能为空"}), 400
+    if not project_type:
+        return jsonify({"status": "error", "message": "项目类型不能为空"}), 400
+    if not unit_name:
+        return jsonify({"status": "error", "message": "甲方单位不能为空"}), 400
+    if not name_array:
+        return jsonify({"status": "error", "message": "甲方负责人不能为空"}), 400
+    if not project_name:
+        return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
+
+    # 处理数据
+    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    date_str = dt.strftime('%Y.%m.%d')
+
+    # 声明项目文件夹
+    base_path = "/mnt/Workspace/协作盘"
+    project_path = rf"{base_path}/{date_str}_{project_type}-{unit_name}-{"、".join(name_array)}-{project_name}"
+
 
     try:
         # TODO: 配置归档脚本
