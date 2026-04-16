@@ -15,7 +15,7 @@ def dify_workflows(project_name):
         'Content-Type': 'application/json',
     }
     data = {
-        "inputs": {"projectName": project_name},
+        "inputs": {"messages": project_name},
         "response_mode": "blocking",
         "user": "0x0CFF"
     }
@@ -30,16 +30,16 @@ def dify_workflows(project_name):
         if status == "succeeded":
             return data['data']['outputs']['text']
         else:
-            print("[错误信息] 请求错误！")
+            print("请求错误！")
             return 0
     except requests.exceptions.Timeout:
-        print("[错误信息] 请求超时！服务可能没有响应")
+        print("请求超时！服务可能没有响应")
         return 0
     except requests.exceptions.ConnectionError as e:
-        print(f"[错误信息] 连接错误: {e}")
+        print(f"连接错误: {e}")
         return 0
     except Exception as e:
-        print(f"[错误信息] 其他错误: {e}")
+        print(f"其他错误: {e}")
         return 0
 
 # 创建文件夹（支持修改所有者、组、权限，需 root 权限）
@@ -126,11 +126,9 @@ def create_secured_file(path, content, mode, owner=None, group=None):
         uid = pwd.getpwnam(owner).pw_uid
         # 获取组ID（GID）
         gid = grp.getgrnam(group).gr_gid
-
         # 修改所有者和组
         os.chown(path, uid, gid)
-
-        print(f"[创建完成] 目录 {path} 已创建，权限 {oct(mode)}，所有者 {owner}:{group}")
+        print(f"[创建完成] 目录 {path}，权限 {oct(mode)}，所有者 {owner}:{group}")
 
     except PermissionError as e:
         print(f"[系统错误] 权限不足，无法修改文件所有者或组")
@@ -257,6 +255,7 @@ def create_project_folder():
                 # 复制幻灯片母稿
                 pptx_file = rf"{project_path}/02_演示工程/V1.0_{project_name}.pptx"
                 shutil.copy2("./Assets/空白母稿.pptx", pptx_file)
+                print(f"[创建完成] 文件 {pptx_file} 已创建")
                 set_file_owner_and_permission(pptx_file, 0o775, owner="BOARD_R5", group="PUBLIC")
             case "项目微课":
                 create_secured_dir(rf"{project_path}", 0o775, owner="BOARD_R5", group="PUBLIC")
@@ -272,35 +271,56 @@ def create_project_folder():
                 # 创建子项目文件夹
             case _:
                 pass
-
         print(rf"[创建完成] {project_path}")
+        return jsonify({"status": "success", "path": project_path}), 200
     except Exception as e:
         print(rf"[创建失败] {project_path}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-    try:
-        match project_type:
-            case "演示美化":
-                markdown_content = dify_workflows(project_name)
-                if markdown_content != 0:
-                    # 写入文档
-                    create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
-                    print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
-                    return jsonify({"status": "success", "path": project_path}), 200
-                else:
-                    print("[错误信息] 工作流执行失败")
-                    return jsonify({"status": "success", "path": project_path}), 200
-            case "高校大赛":
-                print(rf"[温馨提示] 暂无 AI 工作流")
-                return jsonify({"status": "success", "path": project_path}), 200
-            case "高校微课":
-                print(rf"[温馨提示] 暂无 AI 工作流")
-                return jsonify({"status": "success", "path": project_path}), 200
-            case _:
-                pass
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+##################################################################################################################################################
 
+@app.route('/create_project_manuscript', methods=['POST'])
+def create_project_manuscript():
+    # 校验 API Key
+    provided_key = request.headers.get('X-API-Key')
+    if not provided_key or provided_key != API_KEY:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    # 从前端获取数据
+    data = request.get_json()
+    project_type = data.get('projectType')                            # 项目类型
+    generative_manuscript = data.get('generativeManuscript')          # 生成式文稿
+
+    # 校验
+    if not project_type:
+        return jsonify({"status": "error", "message": "项目类型不能为空"}), 400
+    if not generative_manuscript:
+        return jsonify({"status": "error", "message": "生成式文稿选项不能为空"}), 400
+
+    if generative_manuscript == "是":
+        try:
+            match project_type:
+                case "演示美化":
+                    markdown_content = dify_workflows(project_name)
+                    if markdown_content != 0:
+                        # 写入文档
+                        create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
+                        print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
+                        return jsonify({"status": "success"), 200
+                    else:
+                        print("[错误信息] 工作流执行失败")
+                        return jsonify({"status": "success"}), 200
+                case "高校大赛":
+                    print(rf"[温馨提示] 暂无生成式文稿工作流")
+                    return jsonify({"status": "success"}), 200
+                case "高校微课":
+                    print(rf"[温馨提示] 暂无生成式文稿工作流")
+                    return jsonify({"status": "success"}), 200
+                case _:
+                    pass
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
 ##################################################################################################################################################
 
 @app.route('/archive_project_folder', methods=['POST'])
