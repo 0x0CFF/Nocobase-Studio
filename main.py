@@ -294,7 +294,7 @@ def create_project_manuscript():
     name_array = data.get('nameArray')                                # 甲方负责人
     project_name = data.get('projectName')                            # 项目名称
     generative_manuscript = data.get('generativeManuscript')          # 生成式文稿
-    
+
     # 校验
     if not created_at:
         return jsonify({"status": "error", "message": "创建日期不能为空"}), 400
@@ -317,30 +317,29 @@ def create_project_manuscript():
     base_path = "/mnt/Workspace/协作盘"
     project_path = rf"{base_path}/{date_str}_{project_type}-{unit_name}-{"、".join(name_array)}-{project_name}"
 
-    if generative_manuscript == "是":
+    if generative_manuscript == "true":
         try:
             match project_type:
                 case "演示美化":
                     markdown_content = dify_workflows(project_name)
                     if markdown_content != 0:
                         # 写入文档
-                        create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
-                        print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/{project_name}.md")
-                        return jsonify({"status": "success"}), 200
+                        create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/文档/生成式文稿.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
+                        print(rf"[创建完成] {project_path}/02_演示工程/02_甲方素材/文档/生成式文稿.md")
                     else:
                         print("[错误信息] 工作流执行失败")
-                        return jsonify({"status": "success"}), 200
                 case "高校大赛":
                     print(rf"[温馨提示] 暂无生成式文稿工作流")
-                    return jsonify({"status": "success"}), 200
                 case "高校微课":
                     print(rf"[温馨提示] 暂无生成式文稿工作流")
-                    return jsonify({"status": "success"}), 200
                 case _:
                     pass
+            return jsonify({"status": "success"}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
-    
+    else:
+        return jsonify({"status": "success"}), 200
+
 ##################################################################################################################################################
 
 @app.route('/archive_project_folder', methods=['POST'])
@@ -357,7 +356,7 @@ def archive_project_folder():
     unit_name = data.get('unitName')                                  # 甲方单位
     name_array = data.get('nameArray')                                # 甲方负责人
     project_name = data.get('projectName')                            # 项目名称
-    
+
     # 校验
     if not created_at:
         return jsonify({"status": "error", "message": "创建日期不能为空"}), 400
