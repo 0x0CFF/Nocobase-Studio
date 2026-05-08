@@ -253,7 +253,7 @@ def create_project_folder():
                 # 创建项目要求文档
                 create_secured_file(rf"{project_path}/02_演示工程/02_甲方素材/项目要求.md", markdown_content, mode=0o775, owner="BOARD_R5", group="PUBLIC")
                 # 复制幻灯片母稿
-                pptx_file = rf"{project_path}/02_演示工程/V1.0_{project_name}.pptx"
+                pptx_file = rf"{project_path}/02_演示工程/{project_name}_V1.0_{now.strftime("%Y%m%d")}.pptx"
                 shutil.copy2("./Assets/空白母稿.pptx", pptx_file)
                 print(f"[创建完成] 文件 {pptx_file} 已创建")
                 set_file_owner_and_permission(pptx_file, 0o775, owner="BOARD_R5", group="PUBLIC")
